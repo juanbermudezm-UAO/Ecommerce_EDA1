@@ -16,7 +16,7 @@ function analizar() {
 }
 
 function cargarEjemplo() {
-    const ejemplo = 'Customer1 Laptop Technology 3000 1 10;Customer2 Shirt Clothing 50 2 12;Customer1 Mouse Technology 100 1 15;Customer2 Shoes Clothing 200 1 20;Customer3 TV Technology 2500 1 25';
+    const ejemplo = 'Clothing,Technology--Customer1 Laptop Technology 3000 1 10;Customer2 Shirt Clothing 50 2 12;Customer1 Shoes Clothing 100 1 15;Customer2 Shoes Clothing 200 1 20;Customer3 TV Technology 2500 1 25';
     document.getElementById('input').value = ejemplo;
     analizar();
 }
