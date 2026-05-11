@@ -1,9 +1,3 @@
-/**
- * Analiza pedidos de comercio electrónico y genera ranking de clientes
- * @param {string} caso - Cadena con registros de compras separados por ;
- * @returns {string} - Ranking de clientes formateado
-    */
-   
 function calcularPedidos(caso) {                                         //O(m nlog n)
     if (!caso || caso.trim() === '') {                                   //O(1)
         return '';
@@ -11,9 +5,15 @@ function calcularPedidos(caso) {                                         //O(m n
  
     // ── Parsear formato "categorias--registros" ──────────────────────── O(m)
     const separadorIdx = caso.indexOf('--');
-    const registrosStr = separadorIdx !== -1
-        ? caso.substring(separadorIdx + 2)
-        : caso;
+    if (separadorIdx === -1) {
+        return 'Falta --';
+    }
+    const categoriasPermitidas = caso.substring(0, separadorIdx)
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => c !== '');
+    const registrosStr = caso.substring(separadorIdx + 2);
+    const categoriasSet = new Set(categoriasPermitidas);
  
     // ── Dividir registros por ';' ─────────────────────────────────────── O(m)
     const registros = registrosStr.split(';').filter(r => r.trim() !== '');
@@ -21,18 +21,21 @@ function calcularPedidos(caso) {                                         //O(m n
     const clientes = {};                                                //O(1)
  
     registros.forEach(registro => {                                     // O(m)
-        const parts = registro.trim().split(' ');                       // O(1)
-        if (parts.length < 6) return;                                   // O(1)
-        const customer  = parts[0];                                     // O(1) 
-        // parts[1] = product (no se necesita en la salida)
-        const category  = parts[2];
-        const price     = parseFloat(parts[3]);                         // O(1)
-        const quantity  = parseInt(parts[4]);                           // O(1)
-        // parts[5] = timestamp (no se necesita en la salida)
+        const partes = registro.trim().split(' ');                       // O(1)
+        if (partes.length < 6) return;                                   // O(1)
+        const customer  = partes[0];                                     // O(1) 
+        // partes[1] = product (no se necesita en la salida)
+        const category  = partes[2];
+        if (categoriasSet.size > 0 && !categoriasSet.has(category)) {    // O(1) 
+            throw new Error(`Categoría inválida '${category}' no declarada antes de '--'`); // O(1) 
+        }
+        const price     = parseFloat(partes[3]);                         // O(1)
+        const quantity  = parseInt(partes[4]);                           // O(1)
+        // partes[5] = timestamp (no se necesita en la salida)
  
         const gastoPorRegistro = price * quantity;                      // O(1)
  
-        // Inicializar cliente si no existe ─────────────────────────── O(1)
+        // Inicializar cliente cuando no existe ─────────────────────────── O(1)
         if (!clientes[customer]) {                                      
             clientes[customer] = {
                 totalSpent:       0,
