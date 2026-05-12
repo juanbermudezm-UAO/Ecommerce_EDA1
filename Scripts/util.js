@@ -4,91 +4,80 @@
  * @returns {string} - Ranking de clientes formateado
  */
 
-function calcularPedidos(caso) {
-    if (!caso || caso.trim() === '')                        // Complejidad: O(1)
-        return '';                                          // Complejidad: O(1)
-    
-    // Se divide cada registro por el punto y coma
-    let registros = caso.split(';').filter(record => record.trim() !== '');     // Complejidad: O(n)
-    
-    // Se crea el objeto json de clientes
-    let clientes = {};                                      // Complejidad: O(1)
-    
-    // Procesar cada registro
-    registros.forEach(registro => {                         // Complejidad: O(n)
-        let parts = registro.trim().split(' ');             // Complejidad: O(m)
-        if (parts.length < 6) return;                       // Complejidad: O(1)
-        
-        let customer = parts[0];                            // Complejidad: O(1)
-        let product = parts[1];                             // Complejidad: O(1)
-        let category = parts[2];                            // Complejidad: O(1)
-        let price = parseFloat(parts[3]);                   // Complejidad: O(1)
-        let quantity = parseInt(parts[4]);                  // Complejidad: O(1)
-        let timestamp = parseInt(parts[5]);                 // Complejidad: O(1)
-        
-        // Inicializar cliente si no existe
-        if (!clientes[customer]) {                          // Complejidad: O(1)
-            clientes[customer] = {                          // Complejidad: O(1)
-                totalSpent: 0,                              // Complejidad: O(1)
-                categories: {}                              // Complejidad: O(1)
+function calcularPedidos(caso) {                                         //O(m nlog n)
+    if (!caso || caso.trim() === '') {                                   //O(1)
+        return '';
+    }
+
+    // ── Parsear formato "categorias--registros" ──────────────────────── O(m)
+    const separadorIdx = caso.indexOf('--');
+    const registrosStr = separadorIdx !== -1
+        ? caso.substring(separadorIdx + 2)
+        : caso;
+
+    // ── Dividir registros por ';' ─────────────────────────────────────── O(m)
+    const registros = registrosStr.split(';').filter(r => r.trim() !== '');
+
+    const clientes = {};                                                //O(1)
+
+    registros.forEach(registro => {                                     // O(m)
+        const parts = registro.trim().split(' ');                       // O(1)
+        if (parts.length < 6) return;                                   // O(1)
+        const customer = parts[0];                                     // O(1) 
+        // parts[1] = product (no se necesita en la salida)
+        const category = parts[2];
+        const price = parseFloat(parts[3]);                         // O(1)
+        const quantity = parseInt(parts[4]);                           // O(1)
+        // parts[5] = timestamp (no se necesita en la salida)
+
+        const gastoPorRegistro = price * quantity;                      // O(1)
+
+        // Inicializar cliente si no existe ─────────────────────────── O(1)
+        if (!clientes[customer]) {
+            clientes[customer] = {
+                totalSpent: 0,
+                categories: {},
+                favoriteCategory: '',
+                maxCategorySpent: 0
             };
         }
-        
-        // Actualizar total gastado
-        let totalPorRegistro = price * quantity;            // Complejidad: O(1)
-        clientes[customer].totalSpent += totalPorRegistro;  // Complejidad: O(1)
-        
-        // Actualizar conteo de categorías
-        if (!clientes[customer].categories[category]) {     // Complejidad: O(1)
-            clientes[customer].categories[category] = 0;    // Complejidad: O(1)
+
+        // Acumular gasto total del cliente ─────────────────────────── O(1)
+        clientes[customer].totalSpent += gastoPorRegistro;
+
+        // Acumular gasto por categoría ─────────────────────────────── O(1) 
+        clientes[customer].categories[category] =
+            (clientes[customer].categories[category] || 0) + gastoPorRegistro;
+
+        // Actualizar categoría favorita en línea ───────────────────── O(1)
+        if (clientes[customer].categories[category] > clientes[customer].maxCategorySpent) {
+            clientes[customer].maxCategorySpent = clientes[customer].categories[category];
+            clientes[customer].favoriteCategory = category;
         }
-        clientes[customer].categories[category] += quantity;            // Complejidad: O(1)
     });
-    
-    // Determinar categoría favorita para cada cliente
-    const customerList = Object.keys(clientes).map(customer => {        // Complejidad: O(p) donde
-        const customerData = clientes[customer];                        // Complejidad: O(1)
-        let favoriteCategory = '';                                      // Complejidad: O(1)
-        let maxQuantity = 0;                                            // Complejidad: O(1)
-        
-        // Encontrar categoría con más compras
-        Object.keys(customerData.categories).forEach(category => {      // Complejidad: O(p)
-            if (customerData.categories[category] > maxQuantity) {      // Complejidad: O(1)
-                maxQuantity = customerData.categories[category];        // Complejidad: O(1)
-                favoriteCategory = category;                            // Complejidad: O(1)
-            }
-        });
-        
-        return {                                                        // Complejidad: O(1)
-            customer: customer,                                         // Complejidad: O(1)
-            totalSpent: customerData.totalSpent,                        // Complejidad: O(1)
-            favoriteCategory: favoriteCategory                          // Complejidad: O(1)
-        };
+
+    // ── Construir arreglo de clientes ─────────────────────────────────── O(n)
+    const customerList = Object.keys(clientes).map(customer => ({
+        customer: customer,
+        totalSpent: clientes[customer].totalSpent,
+        favoriteCategory: clientes[customer].favoriteCategory
+    }));
+
+    // ── Ordenar según los tres criterios ────────────────── O(n log n)
+    customerList.sort((a, b) => {
+        if (b.totalSpent !== a.totalSpent)
+            return b.totalSpent - a.totalSpent;                         // Criterio 1
+        if (b.favoriteCategory !== a.favoriteCategory)
+            return b.favoriteCategory.localeCompare(a.favoriteCategory);// Criterio 2
+        return a.customer.localeCompare(b.customer);                    // Criterio 3
     });
-    
-    // Ordenar según los criterios especificados
-    customerList.sort((a, b) => {                                       // Complejidad: O(p log p)
-        // Criterio 1: Ordenamiento descendente por totalSpent
-        if (b.totalSpent !== a.totalSpent) {                            // Complejidad: O(1)
-            return b.totalSpent - a.totalSpent;                         // Complejidad: O(1)
-        }
-        
-        // Criterio 2: Ordenamiento descendente por favoriteCategory (alfabético)
-        if (b.favoriteCategory !== a.favoriteCategory) {                // Complejidad: O(1)
-            return b.favoriteCategory.localeCompare(a.favoriteCategory);    // Complejidad: O(1)
-        }
-        
-        // Criterio 3: Ordenamiento ascendente por customer (alfabético)
-        return a.customer.localeCompare(b.customer);                    // Complejidad: O(1)
-    });
-    
-    // Formatear salida
-    let result = customerList.map((item, index) => {                    // Complejidad: O(1)
-        return `${index + 1}) ${item.customer} ${item.totalSpent} ${item.favoriteCategory}`;    // Complejidad: O(1)
-    }).join('\n');                                                      // Complejidad: O(1)
-    
-    return result;                                                      // Complejidad: O(1)
+
+    // ── Formatear y retornar resultado ────────────────────────────────── O(n)
+    return customerList
+        .map((item, idx) => `${idx + 1}) ${item.customer} ${item.totalSpent} ${item.favoriteCategory}`)
+        .join('\n');
 }
 
-    // Complejidad total: O(n + m + p log p) 
-        
+//Calculo Total de la Complejidad:
+//O(1) + O(m) + O(m) + O(1) + O(m) + O(n) + O(n log n) + O(n) = O(m) + O(m) + O(m) + O(n) + O(nlogn) + O(n)
+// = O(3m + 2n + nlogn) = O(m + nlogn)
